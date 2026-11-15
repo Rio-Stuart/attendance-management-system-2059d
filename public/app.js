@@ -256,6 +256,22 @@ function setupModals() {
   const closeHist = () => document.getElementById('subjectHistoryModal').classList.add('hidden');
   document.getElementById('closeSubjectHistoryModal')?.addEventListener('click', closeHist);
   document.getElementById('closeSubjectHistoryBtn')?.addEventListener('click', closeHist);
+
+  // Timetable Slot Modal
+  document.getElementById('openAddTimetableBtn')?.addEventListener('click', openAddTimetableModal);
+  document.getElementById('closeTimetableModal')?.addEventListener('click', () => {
+    document.getElementById('timetableModal').classList.add('hidden');
+  });
+  document.getElementById('cancelTimetableBtn')?.addEventListener('click', () => {
+    document.getElementById('timetableModal').classList.add('hidden');
+  });
+  document.getElementById('timetableModifyFromToday')?.addEventListener('change', e => {
+    const effGroup = document.getElementById('timetableEffectiveDateGroup');
+    if (effGroup) effGroup.style.display = e.target.checked ? 'block' : 'none';
+  });
+  document.getElementById('timetableModalSection')?.addEventListener('change', e => {
+    loadTimetableModalSubjects(e.target.value);
+  });
 }
 
 function showLoginModal() {
@@ -452,6 +468,9 @@ function setupForms() {
       renderSubjectHistoryTable(btn.dataset.histFilter);
     });
   });
+
+  // Timetable Form
+  document.getElementById('timetableForm')?.addEventListener('submit', handleTimetableFormSubmit);
 }
 
 // ---- ADMIN: LOAD DATA ----
@@ -1106,7 +1125,189 @@ function exportDefaultersCsv() {
   a.click();
 }
 
-// ---- TIMETABLE TAB ----
+// ---- TIMETABLE TAB & MODIFICATION FROM CURRENT DATE ----
+async function loadTimetableModalSubjects(sectionId, selectedSectionSubjectId = null) {
+  const select = document.getElementById('timetableModalSubject');
+  if (!sectionId || !select) return;
+  try {
+    const res = await fetch(`${API_BASE}/sections/${sectionId}/subjects`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    select.innerHTML = data.data.map(ss => {
+      const isSel = selectedSectionSubjectId && (Number(selectedSectionSubjectId) === Number(ss.section_subject_id) || Number(selectedSectionSubjectId) === Number(ss.id));
+      return `<option value="${ss.section_subject_id}" ${isSel ? 'selected' : ''}>${ss.subject_name} (${ss.subject_code})</option>`;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load section subjects:', err);
+    select.innerHTML = '<option value="">Failed to load subjects</option>';
+  }
+}
+
+async function openAddTimetableModal() {
+  const modal = document.getElementById('timetableModal');
+  const title = document.getElementById('timetableModalTitle');
+  const slotIdInput = document.getElementById('timetableSlotId');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  title.textContent = 'Add Recurring Class Slot to Timetable';
+  slotIdInput.value = '';
+
+  await loadSectionsDropdown('timetableModalSection');
+  const mainSec = document.getElementById('timetableSectionSelect')?.value;
+  if (mainSec) {
+    document.getElementById('timetableModalSection').value = mainSec;
+  }
+
+  const secId = document.getElementById('timetableModalSection').value;
+  await loadTimetableModalSubjects(secId);
+
+  document.getElementById('timetableModalDay').value = 'MONDAY';
+  document.getElementById('timetableModalStartTime').value = '09:00';
+  document.getElementById('timetableModalEndTime').value = '10:00';
+  document.getElementById('timetableEffectiveDate').value = todayStr;
+  document.getElementById('timetableModalValidTo').value = '2027-05-31';
+
+  const modGroup = document.getElementById('timetableModifyGroup');
+  if (modGroup) modGroup.style.display = 'block';
+  document.getElementById('timetableModifyFromToday').checked = true;
+  document.getElementById('timetableEffectiveDateGroup').style.display = 'block';
+
+  modal.classList.remove('hidden');
+}
+
+async function openEditTimetableModal(slot) {
+  const modal = document.getElementById('timetableModal');
+  const title = document.getElementById('timetableModalTitle');
+  const slotIdInput = document.getElementById('timetableSlotId');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  title.textContent = `Edit Timetable Slot: ${slot.day_of_week} • ${slot.subject_name}`;
+  slotIdInput.value = slot.id;
+
+  await loadSectionsDropdown('timetableModalSection');
+  const secSelect = document.getElementById('timetableModalSection');
+  const targetSecId = slot.section_id || document.getElementById('timetableSectionSelect')?.value;
+  if (targetSecId) secSelect.value = targetSecId;
+
+  await loadTimetableModalSubjects(secSelect.value, slot.section_subject_id);
+
+  document.getElementById('timetableModalDay').value = slot.day_of_week;
+  document.getElementById('timetableModalStartTime').value = (slot.start_time || '09:00').substring(0, 5);
+  document.getElementById('timetableModalEndTime').value = (slot.end_time || '10:00').substring(0, 5);
+
+  const modGroup = document.getElementById('timetableModifyGroup');
+  if (modGroup) modGroup.style.display = 'block';
+  document.getElementById('timetableModifyFromToday').checked = true;
+  document.getElementById('timetableEffectiveDate').value = todayStr;
+  document.getElementById('timetableEffectiveDateGroup').style.display = 'block';
+
+  const validToVal = slot.valid_to ? String(slot.valid_to).split('T')[0] : '2027-05-31';
+  document.getElementById('timetableModalValidTo').value = validToVal;
+
+  modal.classList.remove('hidden');
+}
+
+async function retireTimetableSlot(slotId, dayOfWeek, subjectName) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const confirmed = confirm(
+    `Retire Timetable Slot: ${dayOfWeek} - ${subjectName}?\n\n` +
+    `• Effective starting from: TODAY (${todayStr})\n` +
+    `• Past conducted sessions & attendance history will remain 100% PRESERVED.\n` +
+    `• Future scheduled classes from today onwards will be cleanly removed.\n\n` +
+    `Confirm retirement?`
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/timetable/${slotId}?effective_date=${todayStr}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    alert(`Successfully retired ${dayOfWeek} ${subjectName} slot starting from ${todayStr}. Historical attendance logs are kept intact.`);
+    loadTimetable();
+    loadSessions();
+  } catch (err) {
+    alert(`Failed to retire slot: ${err.message}`);
+  }
+}
+
+async function handleTimetableFormSubmit(e) {
+  e.preventDefault();
+  const slotId = document.getElementById('timetableSlotId').value;
+  const sectionId = document.getElementById('timetableModalSection').value;
+  const sectionSubjectId = document.getElementById('timetableModalSubject').value;
+  const dayOfWeek = document.getElementById('timetableModalDay').value;
+  const startTime = document.getElementById('timetableModalStartTime').value;
+  const endTime = document.getElementById('timetableModalEndTime').value;
+  const modifyFromToday = document.getElementById('timetableModifyFromToday').checked;
+  const effectiveDate = document.getElementById('timetableEffectiveDate').value || new Date().toISOString().split('T')[0];
+  const validTo = document.getElementById('timetableModalValidTo').value || '2027-05-31';
+
+  if (!sectionSubjectId) {
+    alert('Please choose a valid subject.');
+    return;
+  }
+  if (startTime >= endTime) {
+    alert('Start time must be before End time.');
+    return;
+  }
+
+  try {
+    let res;
+    if (slotId) {
+      // Modify slot
+      res = await fetch(`${API_BASE}/timetable/${slotId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section_subject_id: sectionSubjectId,
+          day_of_week: dayOfWeek,
+          start_time: startTime,
+          end_time: endTime,
+          valid_to: validTo,
+          modify_from_today: modifyFromToday,
+          effective_date: effectiveDate
+        })
+      });
+    } else {
+      // Add new slot
+      res = await fetch(`${API_BASE}/timetable`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section_id: sectionId,
+          section_subject_id: sectionSubjectId,
+          day_of_week: dayOfWeek,
+          start_time: startTime,
+          end_time: endTime,
+          valid_from: effectiveDate,
+          valid_to: validTo
+        })
+      });
+    }
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    document.getElementById('timetableModal').classList.add('hidden');
+    alert(slotId
+      ? `Timetable slot updated successfully! Applied starting from ${effectiveDate}. Historical attendance preserved.`
+      : 'New timetable slot added successfully!'
+    );
+
+    const mainSec = document.getElementById('timetableSectionSelect');
+    if (mainSec && sectionId && mainSec.value !== sectionId) {
+      mainSec.value = sectionId;
+    }
+    loadTimetable();
+    loadSessions();
+  } catch (err) {
+    alert(`Failed to save timetable slot: ${err.message}`);
+  }
+}
+
 async function loadTimetable() {
   const sectionSelect = document.getElementById('timetableSectionSelect');
   const sectionId = sectionSelect ? sectionSelect.value : null;
@@ -1117,8 +1318,8 @@ async function loadTimetable() {
     const res = await fetch(`${API_BASE}/sections/${sectionId}/timetable`);
     const data = await res.json();
 
-    if (data.data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="loading">No timetable slots configured for this section.</td></tr>';
+    if (!data.data || data.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">No timetable slots configured for this section.</td></tr>';
       return;
     }
 
@@ -1129,17 +1330,48 @@ async function loadTimetable() {
       return (a.start_time || '').localeCompare(b.start_time || '');
     });
 
-    tbody.innerHTML = sorted.map(wt => `
-      <tr>
-        <td><strong>${wt.day_of_week}</strong></td>
-        <td><strong>${wt.subject_name}</strong> <span class="text-muted">(${wt.subject_code})</span></td>
-        <td><code>${formatTime12h(wt.start_time)}</code></td>
-        <td><code>${formatTime12h(wt.end_time)}</code></td>
-        <td>${formatValidityPeriod(wt.valid_from, wt.valid_to)}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = sorted.map(wt => {
+      const slotJson = JSON.stringify(wt).replace(/'/g, '&#39;');
+      return `
+        <tr>
+          <td><strong>${wt.day_of_week}</strong></td>
+          <td><strong>${wt.subject_name}</strong> <span class="text-muted">(${wt.subject_code})</span></td>
+          <td><code>${formatTime12h(wt.start_time)}</code></td>
+          <td><code>${formatTime12h(wt.end_time)}</code></td>
+          <td>${formatValidityPeriod(wt.valid_from, wt.valid_to)}</td>
+          <td>
+            <div class="action-btn-group">
+              <button type="button" class="btn btn-outline btn-xs edit-tt-btn" data-slot='${slotJson}'>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </button>
+              <button type="button" class="btn btn-outline-danger btn-xs retire-tt-btn" data-id="${wt.id}" data-day="${wt.day_of_week}" data-subj="${wt.subject_name}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Retire from Today
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('.edit-tt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const slot = JSON.parse(btn.getAttribute('data-slot'));
+        openEditTimetableModal(slot);
+      });
+    });
+
+    tbody.querySelectorAll('.retire-tt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const day = btn.getAttribute('data-day');
+        const subj = btn.getAttribute('data-subj');
+        retireTimetableSlot(id, day, subj);
+      });
+    });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${err.message}</td></tr>`;
   }
 }
 

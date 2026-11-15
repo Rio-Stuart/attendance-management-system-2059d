@@ -421,6 +421,17 @@
               <select id="timetableSectionSelect">
                 <!-- Sections -->
               </select>
+              <button id="openAddTimetableBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Class Slot
+              </button>
+            </div>
+          </div>
+
+          <div class="timetable-info-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div>
+              <strong>Timetable Modification & Audit Integrity:</strong> Add, edit, or retire timetable slots with effective dates. When editing an active slot, choose <em>"Apply changes from current date onwards"</em> so past conducted/draft attendance records stay 100% historically intact, while future sessions, attendance predictors, and daily markers automatically reflect the new schedule from today onwards.
             </div>
           </div>
 
@@ -433,10 +444,11 @@
                   <th>Start Time</th>
                   <th>End Time</th>
                   <th>Validity Period</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="timetableTableBody">
-                <tr><td colspan="5" class="loading">Select section to view timetable...</td></tr>
+                <tr><td colspan="6" class="loading">Select section to view timetable...</td></tr>
               </tbody>
             </table>
           </div>
@@ -858,6 +870,76 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" id="closeSubjectHistoryBtn">Close</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Timetable Slot Modal (Add & Modify from Current Date) -->
+      <div id="timetableModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="timetableModalTitle">Add Timetable Class Slot</h3>
+            <button class="close-btn" id="closeTimetableModal">&times;</button>
+          </div>
+          <form id="timetableForm">
+            <input type="hidden" id="timetableSlotId">
+            <div class="form-group">
+              <label>Academic Section</label>
+              <select id="timetableModalSection" required></select>
+            </div>
+            <div class="form-group">
+              <label>Subject</label>
+              <select id="timetableModalSubject" required>
+                <option value="">Select section first...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Day of Week</label>
+              <select id="timetableModalDay" required>
+                <option value="MONDAY">Monday</option>
+                <option value="TUESDAY">Tuesday</option>
+                <option value="WEDNESDAY">Wednesday</option>
+                <option value="THURSDAY">Thursday</option>
+                <option value="FRIDAY">Friday</option>
+                <option value="SATURDAY">Saturday</option>
+                <option value="SUNDAY">Sunday</option>
+              </select>
+            </div>
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label>Start Time</label>
+                <input type="time" id="timetableModalStartTime" required value="09:00">
+              </div>
+              <div class="form-group">
+                <label>End Time</label>
+                <input type="time" id="timetableModalEndTime" required value="10:00">
+              </div>
+            </div>
+
+            <!-- Modify From Today / Effective Date Options -->
+            <div id="timetableModifyGroup" class="timetable-modify-card">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; color: #1e293b;">
+                <input type="checkbox" id="timetableModifyFromToday" checked>
+                <span>Apply schedule changes from current date onwards</span>
+              </label>
+              <p class="text-muted text-sm" style="margin-top: 4px; margin-bottom: 8px;">
+                Safely preserves all historical attendance logs before this date. All future sessions, predictor forecasts, and date markers will automatically follow this revised schedule from the effective date.
+              </p>
+              <div id="timetableEffectiveDateGroup" class="form-group mb-0">
+                <label style="font-size: 0.8rem; font-weight: 600;">Effective Starting Date</label>
+                <input type="date" id="timetableEffectiveDate">
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label style="font-size: 0.85rem;">Valid Until (Academic Year End)</label>
+              <input type="date" id="timetableModalValidTo" value="2027-05-31">
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" id="cancelTimetableBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="saveTimetableBtn">Save Timetable Slot</button>
+            </div>
+          </form>
         </div>
       </div>
     </main>

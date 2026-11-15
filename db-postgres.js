@@ -71,8 +71,9 @@ class NetlifyDatabaseService {
   // ---- Timetable ----
   async getTimetable(sectionId) {
     const db = this.getClient();
-    return await db.sql`
-      SELECT wt.id, wt.section_subject_id, wt.day_of_week, wt.start_time, wt.end_time,
+    const rows = await db.sql`
+      SELECT wt.id, wt.section_subject_id, ss.section_id, ss.subject_id,
+             wt.day_of_week, wt.start_time, wt.end_time,
              wt.valid_from, wt.valid_to,
              s.subject_name, s.subject_code
       FROM weekly_timetable wt
@@ -90,6 +91,132 @@ class NetlifyDatabaseService {
           WHEN 'SUNDAY' THEN 7
         END, wt.start_time
     `;
+    return rows.map(r => ({
+      ...r,
+      valid_from: r.valid_from ? (r.valid_from instanceof Date ? r.valid_from.toISOString().split('T')[0] : String(r.valid_from).split('T')[0]) : null,
+      valid_to: r.valid_to ? (r.valid_to instanceof Date ? r.valid_to.toISOString().split('T')[0] : String(r.valid_to).split('T')[0]) : null
+    }));
+  }
+
+  async createTimetableSlot({ section_id, section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to }) {
+    const db = this.getClient();
+    if (!section_subject_id || !day_of_week || !start_time || !end_time) {
+      throw new Error('Missing required timetable fields');
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sTime = start_time.length === 5 ? start_time : start_time.substring(0, 5);
+    const eTime = end_time.length === 5 ? end_time : end_time.substring(0, 5);
+    const vFrom = valid_from || todayStr;
+    const vTo = valid_to || '2027-05-31';
+    const dayUpper = String(day_of_week).toUpperCase().trim();
+
+    const rows = await db.sql`
+      INSERT INTO weekly_timetable (section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to)
+      VALUES (${Number(section_subject_id)}, ${dayUpper}, ${sTime}, ${eTime}, ${vFrom}, ${vTo})
+      RETURNING *
+    `;
+    return rows[0];
+  }
+
+  async updateTimetableSlot(id, { section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to, modify_from_today, effective_date }) {
+    const db = this.getClient();
+    const existingRows = await db.sql`SELECT * FROM weekly_timetable WHERE id = ${Number(id)}`;
+    if (existingRows.length === 0) throw new Error('Timetable entry not found');
+    const existing = existingRows[0];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const effDate = effective_date || todayStr;
+
+    if (modify_from_today) {
+      const originalValidTo = existing.valid_to ? (existing.valid_to instanceof Date ? existing.valid_to.toISOString().split('T')[0] : String(existing.valid_to).split('T')[0]) : '2027-05-31';
+      // 1. Close historical validity of existing slot on the day before the effective date
+      const d = new Date(effDate + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 1);
+      const prevDayStr = d.toISOString().split('T')[0];
+
+      await db.sql`
+        UPDATE weekly_timetable
+        SET valid_to = ${prevDayStr}
+        WHERE id = ${Number(id)}
+      `;
+
+      // 2. Insert new revised slot starting from the effective date
+      const newSecSubjId = Number(section_subject_id || existing.section_subject_id);
+      const newDay = (day_of_week || existing.day_of_week).toUpperCase().trim();
+      const newStart = start_time ? (start_time.length === 5 ? start_time : start_time.substring(0, 5)) : existing.start_time;
+      const newEnd = end_time ? (end_time.length === 5 ? end_time : end_time.substring(0, 5)) : existing.end_time;
+      const newValidTo = valid_to || originalValidTo;
+
+      const insertedRows = await db.sql`
+        INSERT INTO weekly_timetable (section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to)
+        VALUES (${newSecSubjId}, ${newDay}, ${newStart}, ${newEnd}, ${effDate}, ${newValidTo})
+        RETURNING *
+      `;
+
+      // 3. Clean up un-marked future SCHEDULED sessions generated from old slot so they regenerate cleanly from the new slot
+      await db.sql`
+        DELETE FROM class_sessions
+        WHERE timetable_entry_id = ${Number(id)}
+          AND session_date >= ${effDate}
+          AND status = 'SCHEDULED'
+          AND id NOT IN (SELECT DISTINCT class_session_id FROM attendance_records)
+      `;
+
+      return insertedRows[0];
+    } else {
+      // In-place update
+      const newSecSubjId = section_subject_id ? Number(section_subject_id) : existing.section_subject_id;
+      const newDay = day_of_week ? day_of_week.toUpperCase().trim() : existing.day_of_week;
+      const newStart = start_time ? (start_time.length === 5 ? start_time : start_time.substring(0, 5)) : existing.start_time;
+      const newEnd = end_time ? (end_time.length === 5 ? end_time : end_time.substring(0, 5)) : existing.end_time;
+      const newValidFrom = valid_from || (existing.valid_from ? (existing.valid_from instanceof Date ? existing.valid_from.toISOString().split('T')[0] : String(existing.valid_from).split('T')[0]) : null);
+      const newValidTo = valid_to || (existing.valid_to ? (existing.valid_to instanceof Date ? existing.valid_to.toISOString().split('T')[0] : String(existing.valid_to).split('T')[0]) : null);
+
+      const updatedRows = await db.sql`
+        UPDATE weekly_timetable
+        SET section_subject_id = ${newSecSubjId},
+            day_of_week = ${newDay},
+            start_time = ${newStart},
+            end_time = ${newEnd},
+            valid_from = ${newValidFrom},
+            valid_to = ${newValidTo}
+        WHERE id = ${Number(id)}
+        RETURNING *
+      `;
+      return updatedRows[0];
+    }
+  }
+
+  async deleteTimetableSlot(id, effectiveDate = null) {
+    const db = this.getClient();
+    const existingRows = await db.sql`SELECT * FROM weekly_timetable WHERE id = ${Number(id)}`;
+    if (existingRows.length === 0) throw new Error('Timetable entry not found');
+
+    if (effectiveDate) {
+      const d = new Date(effectiveDate + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 1);
+      const prevDayStr = d.toISOString().split('T')[0];
+
+      await db.sql`
+        UPDATE weekly_timetable
+        SET valid_to = ${prevDayStr}
+        WHERE id = ${Number(id)}
+      `;
+
+      // Clean up un-marked future SCHEDULED sessions generated from retired slot
+      await db.sql`
+        DELETE FROM class_sessions
+        WHERE timetable_entry_id = ${Number(id)}
+          AND session_date >= ${effectiveDate}
+          AND status = 'SCHEDULED'
+          AND id NOT IN (SELECT DISTINCT class_session_id FROM attendance_records)
+      `;
+
+      return { retired: true, valid_to: prevDayStr };
+    } else {
+      await db.sql`DELETE FROM weekly_timetable WHERE id = ${Number(id)}`;
+      return { deleted: true };
+    }
   }
 
   async isHoliday(dateStr) {

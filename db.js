@@ -68,14 +68,55 @@ class AttendanceDB {
     const e4 = this.addEnrollment({ student_id: 6, section_id: s2.id, academic_year: '2026-2027', start_date: '2026-08-01', end_date: null, status: 'ACTIVE' });
     const e5 = this.addEnrollment({ student_id: 7, section_id: s2.id, academic_year: '2026-2027', start_date: '2026-08-01', end_date: null, status: 'ACTIVE' });
 
-    // 6. Weekly Timetable
-    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'MONDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
-    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'WEDNESDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
-    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'TUESDAY', start_time: '10:00', end_time: '11:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
-    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'THURSDAY', start_time: '10:00', end_time: '11:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
-    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'FRIDAY', start_time: '11:00', end_time: '12:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    // 6. Weekly Timetable - Rich daily schedules (3 to 4 classes per day across Mon-Fri)
+    // Section 1 (25BCS801): ss1=DBMS, ss2=OOPS, ss3=OS
+    // MONDAY: 4 classes
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'MONDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'MONDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'MONDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'MONDAY', start_time: '14:00', end_time: '15:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS Lab
+
+    // TUESDAY: 4 classes
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'TUESDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'TUESDAY', start_time: '10:00', end_time: '11:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'TUESDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'TUESDAY', start_time: '14:00', end_time: '15:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS Lab
+
+    // WEDNESDAY: 4 classes
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'WEDNESDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'WEDNESDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'WEDNESDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'WEDNESDAY', start_time: '14:00', end_time: '15:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS Lab
+
+    // THURSDAY: 3 classes
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'THURSDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'THURSDAY', start_time: '10:00', end_time: '11:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'THURSDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS
+
+    // FRIDAY: 3 classes
+    this.addTimetableEntry({ section_subject_id: ss1.id, day_of_week: 'FRIDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // DBMS
+    this.addTimetableEntry({ section_subject_id: ss2.id, day_of_week: 'FRIDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OOPS
+    this.addTimetableEntry({ section_subject_id: ss3.id, day_of_week: 'FRIDAY', start_time: '11:00', end_time: '12:00', valid_from: '2026-08-01', valid_to: '2027-05-31' }); // OS
+
+    // Section 2 (25BCS802): ss4=DBMS, ss5=OOPS, ss6=OS (3 classes per day)
+    this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'MONDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss6.id, day_of_week: 'MONDAY', start_time: '10:00', end_time: '11:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
     this.addTimetableEntry({ section_subject_id: ss4.id, day_of_week: 'MONDAY', start_time: '11:00', end_time: '12:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+
+    this.addTimetableEntry({ section_subject_id: ss4.id, day_of_week: 'TUESDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'TUESDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss6.id, day_of_week: 'TUESDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+
+    this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'WEDNESDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss4.id, day_of_week: 'WEDNESDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' });
     this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'WEDNESDAY', start_time: '14:00', end_time: '15:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+
+    this.addTimetableEntry({ section_subject_id: ss6.id, day_of_week: 'THURSDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss4.id, day_of_week: 'THURSDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'THURSDAY', start_time: '11:30', end_time: '12:30', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+
+    this.addTimetableEntry({ section_subject_id: ss4.id, day_of_week: 'FRIDAY', start_time: '09:00', end_time: '10:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
+    this.addTimetableEntry({ section_subject_id: ss5.id, day_of_week: 'FRIDAY', start_time: '10:15', end_time: '11:15', valid_from: '2026-08-01', valid_to: '2027-05-31' });
     this.addTimetableEntry({ section_subject_id: ss6.id, day_of_week: 'FRIDAY', start_time: '14:00', end_time: '15:00', valid_from: '2026-08-01', valid_to: '2027-05-31' });
 
     // 7. Holidays
@@ -302,6 +343,115 @@ class AttendanceDB {
     const entry = { id, ...data };
     this.weekly_timetable.push(entry);
     return entry;
+  }
+
+  getTimetable(sectionId) {
+    const secId = Number(sectionId);
+    const sectionSubjects = this.section_subjects.filter(ss => ss.section_id === secId);
+    const result = [];
+    for (const ss of sectionSubjects) {
+      const entries = this.weekly_timetable.filter(wt => wt.section_subject_id === ss.id);
+      const subj = this.subjects.find(s => s.id === ss.subject_id);
+      for (const e of entries) {
+        result.push({
+          id: e.id,
+          section_id: secId,
+          section_subject_id: ss.id,
+          subject_id: subj ? subj.id : null,
+          subject_name: subj ? subj.subject_name : 'Unknown',
+          subject_code: subj ? subj.subject_code : '',
+          day_of_week: e.day_of_week,
+          start_time: e.start_time,
+          end_time: e.end_time,
+          valid_from: e.valid_from ? String(e.valid_from).split('T')[0] : null,
+          valid_to: e.valid_to ? String(e.valid_to).split('T')[0] : null
+        });
+      }
+    }
+    const dayOrder = { 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6, 'SUNDAY': 7 };
+    result.sort((a, b) => {
+      const dDiff = (dayOrder[a.day_of_week] || 0) - (dayOrder[b.day_of_week] || 0);
+      if (dDiff !== 0) return dDiff;
+      return (a.start_time || '').localeCompare(b.start_time || '');
+    });
+    return result;
+  }
+
+  createTimetableSlot({ section_id, section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to }) {
+    if (!section_subject_id || !day_of_week || !start_time || !end_time) {
+      throw new Error('Missing required timetable fields');
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    const slot = this.addTimetableEntry({
+      section_subject_id: Number(section_subject_id),
+      day_of_week: String(day_of_week).toUpperCase().trim(),
+      start_time: start_time.length === 5 ? start_time : start_time.substring(0, 5),
+      end_time: end_time.length === 5 ? end_time : end_time.substring(0, 5),
+      valid_from: valid_from || todayStr,
+      valid_to: valid_to || '2027-05-31'
+    });
+    return slot;
+  }
+
+  updateTimetableSlot(id, { section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to, modify_from_today, effective_date }) {
+    const existing = this.weekly_timetable.find(t => t.id === Number(id));
+    if (!existing) throw new Error('Timetable entry not found');
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const effDate = effective_date || todayStr;
+
+    if (modify_from_today) {
+      const originalValidTo = existing.valid_to || '2027-05-31';
+      // 1. Close historical validity of existing slot on the day before the effective date
+      const d = new Date(effDate + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 1);
+      existing.valid_to = d.toISOString().split('T')[0];
+
+      // 2. Insert new revised slot starting from the effective date
+      const newSlot = this.addTimetableEntry({
+        section_subject_id: Number(section_subject_id || existing.section_subject_id),
+        day_of_week: (day_of_week || existing.day_of_week).toUpperCase().trim(),
+        start_time: start_time ? (start_time.length === 5 ? start_time : start_time.substring(0, 5)) : existing.start_time,
+        end_time: end_time ? (end_time.length === 5 ? end_time : end_time.substring(0, 5)) : existing.end_time,
+        valid_from: effDate,
+        valid_to: valid_to || originalValidTo
+      });
+
+      // 3. Clean up un-marked future SCHEDULED sessions generated from old slot so they regenerate from new slot
+      this.class_sessions = this.class_sessions.filter(cs => {
+        if (cs.timetable_entry_id === existing.id && cs.session_date >= effDate && cs.status === 'SCHEDULED') {
+          const hasRecords = this.attendance_records.some(r => r.class_session_id === cs.id);
+          return hasRecords;
+        }
+        return true;
+      });
+
+      return newSlot;
+    } else {
+      // In-place update
+      if (section_subject_id) existing.section_subject_id = Number(section_subject_id);
+      if (day_of_week) existing.day_of_week = day_of_week.toUpperCase().trim();
+      if (start_time) existing.start_time = start_time.length === 5 ? start_time : start_time.substring(0, 5);
+      if (end_time) existing.end_time = end_time.length === 5 ? end_time : end_time.substring(0, 5);
+      if (valid_from) existing.valid_from = valid_from;
+      if (valid_to) existing.valid_to = valid_to;
+      return existing;
+    }
+  }
+
+  deleteTimetableSlot(id, effectiveDate = null) {
+    const existing = this.weekly_timetable.find(t => t.id === Number(id));
+    if (!existing) throw new Error('Timetable entry not found');
+
+    if (effectiveDate) {
+      const d = new Date(effectiveDate + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - 1);
+      existing.valid_to = d.toISOString().split('T')[0];
+      return { retired: true, valid_to: existing.valid_to };
+    } else {
+      this.weekly_timetable = this.weekly_timetable.filter(t => t.id !== Number(id));
+      return { deleted: true };
+    }
   }
 
   addHoliday(data) {

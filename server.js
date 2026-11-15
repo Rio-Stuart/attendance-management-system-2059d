@@ -117,34 +117,51 @@ app.get('/api/sections/:id/timetable', async (req, res) => {
   try {
     const sectionId = Number(req.params.id);
     const { type, db } = getBackend();
-
-    if (type === 'postgres') {
-      const data = await db.getTimetable(sectionId);
-      return res.json({ success: true, data });
-    }
-
-    const sectionSubjects = db.section_subjects.filter(ss => ss.section_id === sectionId);
-    const result = [];
-    for (const ss of sectionSubjects) {
-      const entries = db.weekly_timetable.filter(wt => wt.section_subject_id === ss.id);
-      const subj = db.subjects.find(s => s.id === ss.subject_id);
-      for (const e of entries) {
-        result.push({
-          id: e.id,
-          section_subject_id: ss.id,
-          subject_name: subj ? subj.subject_name : 'Unknown',
-          subject_code: subj ? subj.subject_code : '',
-          day_of_week: e.day_of_week,
-          start_time: e.start_time,
-          end_time: e.end_time,
-          valid_from: e.valid_from,
-          valid_to: e.valid_to
-        });
-      }
-    }
-    res.json({ success: true, data: result });
+    const data = type === 'postgres' ? await db.getTimetable(sectionId) : db.getTimetable(sectionId);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/timetable', async (req, res) => {
+  try {
+    const { section_id, section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to } = req.body;
+    const { type, db } = getBackend();
+    const slot = type === 'postgres'
+      ? await db.createTimetableSlot({ section_id, section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to })
+      : db.createTimetableSlot({ section_id, section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to });
+    res.status(201).json({ success: true, message: 'Timetable slot created successfully', data: slot });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.put('/api/timetable/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to, modify_from_today, effective_date } = req.body;
+    const { type, db } = getBackend();
+    const slot = type === 'postgres'
+      ? await db.updateTimetableSlot(id, { section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to, modify_from_today, effective_date })
+      : db.updateTimetableSlot(id, { section_subject_id, day_of_week, start_time, end_time, valid_from, valid_to, modify_from_today, effective_date });
+    res.json({ success: true, message: 'Timetable slot updated successfully', data: slot });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/timetable/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const effective_date = req.query.effective_date || req.body.effective_date || null;
+    const { type, db } = getBackend();
+    const result = type === 'postgres'
+      ? await db.deleteTimetableSlot(id, effective_date)
+      : db.deleteTimetableSlot(id, effective_date);
+    res.json({ success: true, message: 'Timetable slot processed successfully', data: result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 });
 
@@ -427,7 +444,7 @@ app.get('*', (req, res) => {
 });
 
 // Start local server if run directly
-if (process.env.NODE_ENV !== 'test' && !process.env.NETLIFY) {
+if (require.main === module && !process.env.NETLIFY) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`[+] Attendance Management System running at http://localhost:${PORT}`);
