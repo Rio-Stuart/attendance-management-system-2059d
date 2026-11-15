@@ -1409,12 +1409,15 @@ async function detectUpcomingClasses() {
     if (!dashData.success) throw new Error(dashData.message);
 
     if (ssId === 'all') {
+      const attended = Number(dashData.data.total_attended || (dashData.data.overall && dashData.data.overall.totalAttended) || 0);
+      const conducted = Number(dashData.data.total_conducted || (dashData.data.overall && dashData.data.overall.totalConducted) || 0);
+      const percentage = Number(dashData.data.overall_percentage || (dashData.data.overall && dashData.data.overall.overallPercentage) || 0);
       currentSubjectBaseline = {
         isOverall: true,
         name: 'All Subjects (Overall Attendance)',
-        attended: dashData.data.overall.totalAttended,
-        conducted: dashData.data.overall.totalConducted,
-        percentage: dashData.data.overall.overallPercentage,
+        attended: attended,
+        conducted: conducted,
+        percentage: percentage,
         subjects: dashData.data.subjects || []
       };
     } else {
